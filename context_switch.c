@@ -1,25 +1,25 @@
 #define _GNU_SOURCE
 
 #include <sched.h>
-#include <stdio.h>
 #include <signal.h>
+#include <stdio.h>
 #include <stdlib.h>
-#include <unistd.h>
 #include <time.h>
+#include <unistd.h>
 
 /*** Function Declarations ***/
 double contextSwitch(int numtrials);
-double runTrial(int numtrials);
 void setCPUAffinity();
 
 /*** Main ***/
 int main() {
 
-  // Set the machine to s single processor
+  // Set the machine to a single processor
   setCPUAffinity(3);
 
   // Variables to calculate averages
-  int trials = 10000;
+  int numswitch = 1000;
+  int numtrials = 10;
   double count = 0.0;
   double timesum = 0.0;
 
@@ -27,22 +27,22 @@ int main() {
   printf("**** CONTEXT SWITCH ****\nTrial\t# switches\tTrial Time\tAverage Time for Context Switch\n");
 
   // Run trials multiple times
-  for (int i=0; i<10; i++) {
-    if (i == 5)
-      trials *= 10;
-    double t = contextSwitch(trials);
+  for (int i=0; i<numtrials; i++) {
+    if (i == numtrials/2)
+      numswitch *= 10;
+    double t = contextSwitch(numswitch);
     // Sometimes the gettime method returns bogus times which result in negative numbers; disregard these trials
     if (t > 0) {
-      timesum += t;
-      printf("%d\t%d\t\t%f ms\t%f ms\n", (int)++count, trials, t, t/trials);
+      timesum += t/numswitch;
+      printf("%d\t%d\t\t%f ms\t%f ms\n", (int)++count, numswitch, t, t/numswitch);
     }
     else {
-      i--;
+      i--;    // If we got a negative number for time, do another trial
     }
   }
 
   // Final message and average
-  printf("Average time for context switch overall: %f ms\n", timesum/trials/count);
+  printf("Overall average time for context switch: %f ms\n", timesum/count);
 
   return 0;
 }
@@ -83,9 +83,6 @@ double contextSwitch(int numtrials) {
 
     clock_gettime(CLOCK_REALTIME, &endTime); // record end time
     double t = ((endTime.tv_nsec-startTime.tv_nsec)*1.0)/(1.0e6);  // calculate elapsed time
-
-    // printf("%d - %d = %f\n", (int)endTime.tv_sec, (int)startTime.tv_sec, (endTime.tv_nsec-startTime.tv_nsec)*1.0);
-    // kill(9, childpid);       // kill child process
     close(p[0]); close(p[1]);   // close pipe
 
     return t;
@@ -115,7 +112,7 @@ double contextSwitch(int numtrials) {
       }
     }
 
-    // close the pipe and return
+    // close the pipe and exit process
     close(p[0]); close(p[1]);
     exit(0);
   }
