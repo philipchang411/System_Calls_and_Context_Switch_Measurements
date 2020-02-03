@@ -1,5 +1,8 @@
 .PHONY: runcs runtest clean runsc
 
+make:
+	(gcc -c system_call.c && gcc -c context_switch.c)
+
 compsc: system_call
 	@ gcc -c system_call.c
 
