@@ -15,4 +15,4 @@ runcs: compcs
 
 
 clean:
-	@ -rm *.o context_switch system_call *.txt
+	@ -rm context_switch system_call *.txt *.o *.out
