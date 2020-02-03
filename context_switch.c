@@ -67,7 +67,7 @@ double contextSwitch(int numtrials) {
   /* Parent process */
   if(childpid != 0) {
     struct timespec startTime, endTime;
-    clock_gettime(CLOCK_REALTIME, &startTime);
+    clock_gettime(CLOCK_MONOTONIC, &startTime);
 
     while (num > 0) {
       nbytes = read(p[0], &nread, intsize);
@@ -84,7 +84,7 @@ double contextSwitch(int numtrials) {
       }
     }
 
-    clock_gettime(CLOCK_REALTIME, &endTime); // record end time
+    clock_gettime(CLOCK_MONOTONIC, &endTime); // record end time
     double t = ((endTime.tv_nsec-startTime.tv_nsec)*1.0)/(1.0e6);  // calculate elapsed time
     close(p[0]); close(p[1]);   // close pipe
 

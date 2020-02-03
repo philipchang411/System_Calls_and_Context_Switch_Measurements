@@ -62,7 +62,7 @@ double doSyscall(int numcalls, int file) {
   struct timespec startTime, endTime;
 
   // Records starting time
-  clock_gettime(CLOCK_REALTIME, &startTime);
+  clock_gettime(CLOCK_MONOTONIC, &startTime);
 
   // Perform 0 byte reads (numcall) times
   for (i=0; i<numcalls; i++) {
@@ -70,7 +70,7 @@ double doSyscall(int numcalls, int file) {
   }
 
   // Record ending time and return difference from starting time
-  clock_gettime(CLOCK_REALTIME, &endTime);
+  clock_gettime(CLOCK_MONOTONIC, &endTime);
   double t = ((endTime.tv_nsec-startTime.tv_nsec)*1.0)/(1.0e6);
 
   return t;
