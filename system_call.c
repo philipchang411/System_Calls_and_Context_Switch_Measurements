@@ -1,63 +1,77 @@
+#define _GNU_SOURCE
+
+#include <fcntl.h>
+#include <time.h>
 #include <stdio.h>
 #include <time.h>
+#include <unistd.h>
 
-double arrayIteration();
+/*** FUNCTIONS ***/
+double doSyscall(int numcalls, int file);
 
-int main()
-{
-    //Begins the clock to get the total run time of the program
-    //clock_t begin = clock();
-    double arrayTime;
-    arrayTime= arrayIteration();
-    //clock_t end = clock();
-    //double total_time_spent = (double)(end - begin) / CLOCKS_PER_SEC;
-    printf("Total time: %f ms \n", arrayTime);
+/*** MAIN ***/
+int main() {
+
+  // Variables used to calculate averages
+  int i;
+  int numcalls = 1000;    // Starting number of iterations; increases as program progresses
+  int numtrials = 10;
+  double timesum = 0.0;
+
+  // Open file
+  int fd = open("dummy.txt", O_RDONLY | O_CREAT, 0222);
+
+  // Starting message
+  printf("\n**** SYSTEM CALLS ****\nTrial\t# calls\tTrial Time\tAverage Time for Sys Call\n");
+
+  // Run trials multiple times
+  for (i=0; i<numtrials; i++) {
+    // Increase number of system calls by a factor of 10 after every 5th trial
+    if(i%5 == 0)
+      numcalls *= 10;
+    
+    // Run the determined amount of syscalls
+    double t = doSyscall(numcalls, fd);
+    if (t > 0) {
+      // If time recorded is "good" (nonnegative), record the trial time
+      timesum += t/numcalls;
+      printf("%d\t%d\t%f ms\t%f ms\n", i+1, numcalls, t, t/numcalls);
+    }
+    else {
+      // If the time recorded is "bad" (negative), throw out the trial results and repeat
+      if (i%5 == 0)
+        numcalls /= 10;
+      i--;
+    }
+  }
+
+  // Close and remove file
+  close(fd);
+  remove("dummy.txt");
+
+  // Final message and average
+  printf("Overall average time per system call: %f ms\n\n", timesum/numtrials);
+
+  return 0;
 }
 
-double arrayIteration()
-{
-    //Opens the file that the results are printed to in order to see the increase in time that a larger structure takes to navigate
-    FILE *file, *times;
-    file = fopen("System_Call.txt", "w");
-    times = fopen("TimeRecord.txt", "w");
-    fprintf(file, "Array Iteration: \n");
-    int storage[1000000];
+/*** FUNCTIONS ***/
+double doSyscall(int numcalls, int file) {
+  int *buf;
+  int i;
+  struct timespec startTime, endTime;
 
-    //Starts the clock when the reading and writing begins 
-    clock_t begin = clock();
-    int size;
-    size = sizeof(storage)/sizeof(storage[0]);
+  // Records starting time
+  clock_gettime(CLOCK_REALTIME, &startTime);
 
-    int totalInterations = 0;
-    double sumTime = 0;
-    //for loop writes to the array and fills it in 
-    for(int i = 0; i < size; i++)
-    {
-        //writing
-        //storage[i] = i;
-        fprintf(file, "%i\n", i);
-        if(i%10000 == 0)
-        {
-            //only counds the time when it starts reading
-            clock_t readingTimeStart = clock();
-            for(int j = 0; j < i; j++)
-            {
-                //reading portion
-                int temp=0;
-                fscanf(file, "%d", &temp); 
-            }
-            clock_t readingTimeEnd = clock();
-            double readingTime = (double)(readingTimeEnd - readingTimeStart) / CLOCKS_PER_SEC;
-            sumTime = sumTime + readingTime;
-            fprintf(times, "Time needed to read current array of size %i : %f ms \n", i, readingTime);
-            totalInterations++;
-        }
-    }
-    clock_t end = clock();
-    double time_spent = (double)(end - begin) / CLOCKS_PER_SEC;
-    fclose(file);
-    double averageTime = sumTime/(float)totalInterations;
-    fprintf(times, "\n\nAverage Time: %f ms\n", averageTime);
-    fclose(times);
-    return time_spent;
+  // Perform 0 byte reads (numcall) times
+  for (i=0; i<numcalls; i++) {
+    read(file, buf, 0);
+  }
+
+  // Record ending time and return difference from starting time
+  clock_gettime(CLOCK_REALTIME, &endTime);
+  double t = ((endTime.tv_nsec-startTime.tv_nsec)*1.0)/(1.0e6);
+
+  return t;
 }
