@@ -16,10 +16,11 @@ int main() {
   // Set the machine to s single processor
   setCPUAffinity(3);
 
-  int trials = 10;
+  int trials = 10000;
   double time = 0;
 
   // Measure cost of a context switch
+  /*
   for (int i=0; i<20; i++) {
     if(i%5 == 0)
       trials *= 10;
@@ -27,6 +28,11 @@ int main() {
     if (time > 0)
       printf("for %d:  %f\n", trials, time);
   }
+  */
+
+  time = contextSwitch(trials);
+    if (time > 0)
+      printf("for %d:  %f\n", trials, time);
 
   return 0;
 }
@@ -47,8 +53,8 @@ double contextSwitch(int numtrials) {
 
   /* Parent process */
   if(childpid != 0) {
-    clock_t startTime, endTime;
-    startTime = clock();
+    struct timespec startTime, endTime;
+    clock_gettime(CLOCK_REALTIME, &startTime);
 
     while (num > 0) {
       nbytes = read(p[0], &nread, intsize);
@@ -65,8 +71,10 @@ double contextSwitch(int numtrials) {
       }
     }
 
-    endTime = clock(); // record end time
-    double t = ((endTime-startTime)*1.0)/(CLOCKS_PER_SEC);  // calculate elapsed time
+    clock_gettime(CLOCK_REALTIME, &endTime); // record end time
+    double t = ((endTime.tv_nsec-startTime.tv_nsec)*1.0)/(1.0e6);  // calculate elapsed time
+
+    // printf("%d - %d = %f\n", (int)endTime.tv_sec, (int)startTime.tv_sec, (endTime.tv_nsec-startTime.tv_nsec)*1.0);
 
     close(p[0]); close(p[1]);   // close pipe
 
