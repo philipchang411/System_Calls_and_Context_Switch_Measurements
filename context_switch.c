@@ -3,11 +3,13 @@
 #include <sched.h>
 #include <stdio.h>
 #include <signal.h>
+#include <stdlib.h>
 #include <unistd.h>
 #include <time.h>
 
 /*** Function Declarations ***/
 double contextSwitch(int numtrials);
+double runTrial(int numtrials);
 void setCPUAffinity();
 
 /*** Main ***/
@@ -16,23 +18,31 @@ int main() {
   // Set the machine to s single processor
   setCPUAffinity(3);
 
+  // Variables to calculate averages
   int trials = 10000;
-  double time = 0;
+  double count = 0.0;
+  double timesum = 0.0;
 
-  // Measure cost of a context switch
-  /*
-  for (int i=0; i<20; i++) {
-    if(i%5 == 0)
+  // Starting message
+  printf("**** CONTEXT SWITCH ****\nTrial\t# switches\tTrial Time\tAverage Time for Context Switch\n");
+
+  // Run trials multiple times
+  for (int i=0; i<10; i++) {
+    if (i == 5)
       trials *= 10;
-    time = contextSwitch(trials);
-    if (time > 0)
-      printf("for %d:  %f\n", trials, time);
+    double t = contextSwitch(trials);
+    // Sometimes the gettime method returns bogus times which result in negative numbers; disregard these trials
+    if (t > 0) {
+      timesum += t;
+      printf("%d\t%d\t\t%f ms\t%f ms\n", (int)++count, trials, t, t/trials);
+    }
+    else {
+      i--;
+    }
   }
-  */
 
-  time = contextSwitch(trials);
-    if (time > 0)
-      printf("for %d:  %f\n", trials, time);
+  // Final message and average
+  printf("Average time for context switch overall: %f ms\n", timesum/trials/count);
 
   return 0;
 }
@@ -75,7 +85,7 @@ double contextSwitch(int numtrials) {
     double t = ((endTime.tv_nsec-startTime.tv_nsec)*1.0)/(1.0e6);  // calculate elapsed time
 
     // printf("%d - %d = %f\n", (int)endTime.tv_sec, (int)startTime.tv_sec, (endTime.tv_nsec-startTime.tv_nsec)*1.0);
-
+    // kill(9, childpid);       // kill child process
     close(p[0]); close(p[1]);   // close pipe
 
     return t;
@@ -107,7 +117,7 @@ double contextSwitch(int numtrials) {
 
     // close the pipe and return
     close(p[0]); close(p[1]);
-    return -1;
+    exit(0);
   }
 }
 
