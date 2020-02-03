@@ -45,22 +45,68 @@ int contextSwitch(int NUMTRIALS) {
   pipe(p);
   childpid = fork();
 
+  printf("forked %d\n", childpid);
+
   // if there was an error forking, send error message and exit function
   if (childpid < 0) {
     perror("Error forking");
     return -1;
   }
-
+  
+  /* Parent process */
   if(childpid != 0) {
     startTime = clock();
-    write(p[1], &one, intsize);
-    close(p[0]); close(p[1]);
-    return (int)startTime;
+    printf("start: %d\n", childpid);
+    // sit in a loop and wait for signal from child so we can send a token
+    while (NUMTRIALS > 0) {
+      nbytes = read(p[0], &nread, intsize);
+      printf("%d:\t%d\n", childpid, nbytes);
+
+      if (nbytes == -1) {     // continue looping if there's nothing in the pipe to read
+       printf("\tempty\n");
+        break;
+      }
+      else if (nbytes = 0) {  // exit funtion if connection has closed
+        clock_t endTime = clock()/CLOCKS_PER_SEC;
+        printf("\tend: %d\n", (int)endTime);
+        close(p[0]); close(p[1]);
+        // kill(childpid, SIGKILL);
+        return -1;
+      }
+      else {            // if child has responded, send another token
+        printf("\tWRITETO  %d\n", childpid);
+        NUMTRIALS -= nread;   // decrement counter
+        write(p[1], &one, intsize);
+      }
+    }
   }
+
+  /* Child process (childpid == 0) */
   else {
-    nbytes = read(p[0], &nread, intsize);
-    close(p[0]); close(p[1]);
-    return nbytes;
+    int i=0;
+
+    // send first message to parent
+    write(p[1], &one, intsize);
+
+    // sit in a loop and wait for parent to be ready to receive token
+    // only send the number of tokens given in NUMTRIALS
+    while (i < NUMTRIALS) {
+      nbytes = read(p[0], &nread, intsize);
+
+      if (nbytes == -1) {     // continue looping if there's nothing in the pipe to read
+        break;
+      }
+      else if (nbytes = 0) {  // exit function if connection has closed
+        printf("CHILD ENDING\n");
+        close(p[0]); close(p[1]);
+        return -1;
+      }
+      else {            // if parent has responded, send another token
+        printf("\tWRITING BACK\n");
+        write(p[1], &one, intsize);
+        i++;
+      }
+    }
   }
 }
 
