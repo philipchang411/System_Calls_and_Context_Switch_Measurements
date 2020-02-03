@@ -1,10 +1,10 @@
 .PHONY: runcs runtest clean runsc
 
-compsc: System_Call
-	@ gcc -c System_Call.c
+compsc: system_call
+	@ gcc -c system_call.c
 
 runsc: compsc
-	@ ./System_Call
+	@ ./system_call
 
 
 compcs: context_switch
@@ -15,4 +15,4 @@ runcs: compcs
 
 
 clean:
-	@ -rm *.o context_switch System_Call
+	@ -rm *.o context_switch system_call *.txt
