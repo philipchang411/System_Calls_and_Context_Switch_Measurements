@@ -33,11 +33,11 @@ int main() {
 
 /*** Function Definitions ***/
 /**********************************************/
-int contextSwitch(int NUMTRIALS) {
+int contextSwitch(int numtrials) {
   int p[2];
   int one = 1;
+  int num = numtrials;
   int nbytes, nread;
-  clock_t startTime, endTime;
   size_t intsize = 4;
   pid_t childpid;
 
@@ -45,22 +45,61 @@ int contextSwitch(int NUMTRIALS) {
   pipe(p);
   childpid = fork();
 
-  // if there was an error forking, send error message and exit function
-  if (childpid < 0) {
-    perror("Error forking");
-    return -1;
+  /* Parent process */
+  if(childpid != 0) {
+    clock_t startTime, endTime;
+    startTime = clock();
+
+    while (num > 0) {
+      nbytes = read(p[0], &nread, intsize);
+
+      if (nbytes == -1) {     // continue looping if there's nothing in the pipe to read
+        continue;
+      }
+      else if (nbytes == 0) {  // exit funtion if connection has closed
+        break;
+      }
+      else {            // if child has responded, send another token
+        num -= nread;   // decrement counter
+        write(p[1], &one, intsize);
+      }
+    }
+
+    endTime = clock()/CLOCKS_PER_SEC; // record end time
+
+    close(p[0]); close(p[1]);   // close pipe
+    kill(childpid, SIGKILL);    // kill child so its value is not passed up to the main process
+
+    return num;
   }
 
-  if(childpid != 0) {
-    startTime = clock();
-    write(p[1], &one, intsize);
-    close(p[0]); close(p[1]);
-    return (int)startTime;
-  }
+  /* Child process */
   else {
-    nbytes = read(p[0], &nread, intsize);
+    int i=0;
+
+    // send first message to parent
+    write(p[1], &one, intsize);
+
+    // sit in a loop and wait for parent to be ready to receive token
+    // only send the number of tokens given in numtrials
+    while (i < numtrials) {
+      nbytes = read(p[0], &nread, intsize);
+
+      if (nbytes == -1) {     // continue looping if there's nothing in the pipe to read
+        continue;
+      }
+      else if (nbytes == 0) {  // exit function if connection has closed
+        break;
+      }
+      else {            // if parent has responded, send another token
+        write(p[1], &one, intsize);
+        i++;
+      }
+    }
+
+    // close the pipe and return (parent function should kill child before child returns this value)
     close(p[0]); close(p[1]);
-    return nbytes;
+    return -1;
   }
 }
 
