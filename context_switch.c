@@ -27,7 +27,8 @@ int main() {
   printf("**** CONTEXT SWITCH ****\nTrial\t# switches\tTrial Time\tAverage Time for Context Switch\n");
 
   // Run trials multiple times
-  for (int i=0; i<numtrials; i++) {
+  int i;
+  for (i=0; i<numtrials; i++) {
     if (i == numtrials/2)
       numswitch *= 10;
     double t = contextSwitch(numswitch);
