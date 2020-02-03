@@ -3,12 +3,10 @@
 #include <sched.h>
 #include <stdio.h>
 #include <unistd.h>
-
-#include <stdlib.h>
-#include <string.h>
+#include <time.h>
 
 /*** Function Declarations ***/
-void contextSwitch();
+double contextSwitch();
 void setCPUAffinity();
 
 /*** Main ***/
@@ -17,18 +15,22 @@ int main() {
   // Set the machine to s single processor
   setCPUAffinity(3);
 
+  int trials = 100;
+
   // Measure cost of a context switch
-  contextSwitch(100);
+  double time = contextSwitch(trials);
+  printf("Time taken for %d forced context switches: %f\n", trials, time);
 
   return 0;
 }
 
 /*** Function Definitions ***/
 /**********************************************/
-void contextSwitch(int NUMTRIALS) {
+double contextSwitch(int NUMTRIALS) {
   int p[2];
   int one = 1;
   int nbytes, nread;
+  clock_t startTime, endTime;
   size_t intsize = 4;
   pid_t childpid;
 
@@ -36,25 +38,29 @@ void contextSwitch(int NUMTRIALS) {
   pipe(p);
   childpid = fork();
 
+  printf("forked %d\n", childpid);
+
   // if there was an error forking, send error message and exit function
   if (childpid < 0) {
     perror("Error forking");
-    return;
+    return -1.0;
   }
   
   /* Parent process */
-  if(childpid > 0) {
-    // sit in a loop and wait for signal from child to send token
+  if(childpid != 0) {
+    startTime = clock();
+    printf("start: %d\n", (int)startTime);
+    // sit in a loop and wait for signal from child so we can send a token
     while (NUMTRIALS > 0) {
-      printf("Parent has:\t%d\n", NUMTRIALS);
-
       nbytes = read(p[0], &nread, intsize);
 
       if (nbytes == -1) {     // continue looping if there's nothing in the pipe to read
         break;
       }
       else if (nbytes = 0) {  // exit funtion if connection has closed
-        return;
+        clock_t endTime = clock();
+        printf("end: %d\n", (int)endTime);
+        return (double)childpid;
       }
       else {            // if child has responded, send another token
         NUMTRIALS -= nread;   // decrement counter
@@ -79,11 +85,10 @@ void contextSwitch(int NUMTRIALS) {
         break;
       }
       else if (nbytes = 0) {  // exit function if connection has closed
-        return;
+        return 0;
       }
       else {            // if parent has responded, send another token
         write(p[1], &one, intsize);
-        printf("Child responds\n");
         i++;
       }
     }
