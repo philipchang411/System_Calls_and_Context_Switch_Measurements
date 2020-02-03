@@ -18,18 +18,18 @@ int main() {
   setCPUAffinity(3);
 
   // Variables to calculate averages
-  int numswitch = 1000;
+  int numswitch = 1000;   // Starting number of context switches to observe; increases as program progresses
   int numtrials = 10;
   double count = 0.0;
   double timesum = 0.0;
 
   // Starting message
-  printf("**** CONTEXT SWITCH ****\nTrial\t# switches\tTrial Time\tAverage Time for Context Switch\n");
+  printf("\n**** CONTEXT SWITCH ****\nTrial\t# switches\tTrial Time\tAverage Time for Context Switch\n");
 
   // Run trials multiple times
   int i;
   for (i=0; i<numtrials; i++) {
-    if (i == numtrials/2)
+    if (i%5 == 0)
       numswitch *= 10;
     double t = contextSwitch(numswitch);
     // Sometimes the gettime method returns bogus times which result in negative numbers; disregard these trials
@@ -38,12 +38,14 @@ int main() {
       printf("%d\t%d\t\t%f ms\t%f ms\n", (int)++count, numswitch, t, t/numswitch);
     }
     else {
-      i--;    // If we got a negative number for time, do another trial
+      if (i%5 == 0)
+        numswitch /= 10;
+      i--;
     }
   }
 
   // Final message and average
-  printf("Overall average time for context switch: %f ms\n", timesum/count);
+  printf("Overall average time per context switch: %f ms\n\n", timesum/count);
 
   return 0;
 }
@@ -53,8 +55,8 @@ int main() {
 double contextSwitch(int numtrials) {
   int p[2];
   int one = 1;
-  int num = numtrials;
-  int nbytes, nread;
+  int num = numtrials/2;    // Divide by 2 because parent and child will each send (numtrials/2)
+  int nbytes, nread;        // messages to each other, resulting in (numtrials) context switches.
   size_t intsize = 4;
   pid_t childpid;
 
