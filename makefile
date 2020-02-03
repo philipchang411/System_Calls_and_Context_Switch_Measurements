@@ -15,11 +15,4 @@ runcs: compcs
 
 
 clean:
-	@ -rm *.o context_switch System_Call test
-
-
-comptest: test
-	@ gcc -c test.c
-
-runtest: comptest
-	@ ./test
+	@ -rm *.o context_switch System_Call
